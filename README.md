@@ -93,7 +93,7 @@ https://github.com/user-attachments/assets/45cf2a55-f15c-43d9-9d79-3700e188c0fa
 
 
 
-
+---
 
 ## 🧠 Tech Stack
 
@@ -106,7 +106,8 @@ https://github.com/user-attachments/assets/45cf2a55-f15c-43d9-9d79-3700e188c0fa
 | Image Proc. | OpenCV (Image capture and processing)                                      |
 | Android     | Android Studio, Java, Android SDK, CameraX, Retrofit, Gson, Logcat, Gradle |
 
-### 📱 Android-Specific Stack
+
+## 📱 Android-Specific Stack
 
 | Technology         | Purpose                                                             |
 |--------------------|----------------------------------------------------------------------|
