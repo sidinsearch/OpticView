@@ -2,6 +2,11 @@ plugins {
     alias(libs.plugins.android.application)
 }
 
+def groqKey = rootProject.file("local.properties").readLines()
+        .find { it.startsWith("GROQ_API_KEY=") }
+        ?.split("=")
+        ?.getAt(1)
+
 android {
     namespace 'com.example.opticview'
     compileSdk = 34
@@ -12,7 +17,7 @@ android {
         targetSdk = 34
         versionCode = 1
         versionName = "1.0"
-
+        buildConfigField "String", "GROQ_API_KEY", "\"${groqKey}\""
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
