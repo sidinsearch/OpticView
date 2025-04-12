@@ -97,6 +97,7 @@ We're currently working on an Android version for native performance and offline
 | AI Model    | Meta LLaMA-4 (via Groq API)         |
 | Audio       | Web Speech API                      |
 | Image Proc. | OpenCV (optional capture logic)     |
+| Android     | Android Studio, Java, Android SDK, CameraX, Retrofit, Gson |
 
 ---
 
