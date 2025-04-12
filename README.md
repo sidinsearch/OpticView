@@ -94,20 +94,34 @@ https://github.com/user-attachments/assets/45cf2a55-f15c-43d9-9d79-3700e188c0fa
 
 
 
----
 
 ## 🧠 Tech Stack
 
-| Layer       | Technology                          |
-|-------------|-------------------------------------|
-| Frontend    | HTML5, TailwindCSS, WebRTC, JS      |
-| Backend     | Python, Flask, Gunicorn             |
-| AI Model    | Meta LLaMA-4 (via Groq API)         |
-| Audio       | Web Speech API                      |
-| Image Proc. | OpenCV (optional capture logic)     |
-| Android     | Android Studio, Java, Android SDK, CameraX, Retrofit, Gson |
+| Layer       | Technology                                                                 |
+|-------------|----------------------------------------------------------------------------|
+| Frontend    | HTML5, TailwindCSS, WebRTC, JavaScript                                     |
+| Backend     | Python, Flask, Gunicorn                                                    |
+| AI Model    | Meta LLaMA-4 Maverick (via Groq API)                                       |
+| Audio       | Web Speech API (Browser TTS), pyttsx3 (TTS on Raspberry Pi)                |
+| Image Proc. | OpenCV (Image capture and processing)                                      |
+| Android     | Android Studio, Java, Android SDK, CameraX, Retrofit, Gson, Logcat, Gradle |
 
----
+### 📱 Android-Specific Stack
+
+| Technology         | Purpose                                                             |
+|--------------------|----------------------------------------------------------------------|
+| **Java**           | Core Android App development                                         |
+| **Android Studio** | Primary development IDE                                              |
+| **CameraX**        | Real-time image capture via rear camera                              |
+| **Base64 Encoder** | Convert image to Base64 string for API transmission                  |
+| **Retrofit**       | HTTP client for API communication                                    |
+| **Gson**           | JSON parsing and serialization                                       |
+| **Volley**         | Alternative HTTP request handling (optional)                         |
+| **Logcat**         | Debugging and real-time logging during app execution                 |
+| **Gradle**         | Dependency management and project building                           |
+| **Postman**        | API testing and validation                                           |
+| **GitHub**         | Version control and collaborative development                        |
+
 
 
 ## 🧪 Deployment Notes
