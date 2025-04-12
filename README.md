@@ -82,7 +82,7 @@ We're currently working on an Android version for native performance and offline
 
 ## 🎥 Demo
 
-> 📽️ **Make sure to Enable Sound **
+> 📽️ **Make Sure To Enable Sound **
 
 
 
