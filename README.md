@@ -82,9 +82,17 @@ We're currently working on an Android version for native performance and offline
 
 ## 🎥 Demo
 
-> 📽️ **Video demo coming soon...**
+> 📽️ **Make sure to enable sound **
 
-<!-- Once your video is live, add a YouTube or Vimeo embed/link here -->
+
+
+
+
+https://github.com/user-attachments/assets/45cf2a55-f15c-43d9-9d79-3700e188c0fa
+
+
+
+
 
 ---
 
