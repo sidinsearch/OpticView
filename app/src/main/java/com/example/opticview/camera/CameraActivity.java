@@ -19,7 +19,8 @@ import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
 
 import com.example.opticview.R;
-import com.example.opticview.api.GroqApiService;
+import com.example.opticview.api.GroqApiClient;
+import com.example.opticview.tts.TextToSpeechManager;
 
 import java.io.ByteArrayOutputStream;
 import java.nio.ByteBuffer;
@@ -34,12 +35,16 @@ public class CameraActivity extends AppCompatActivity {
     private Handler handler = new Handler();
     private static final long INTERVAL = 20000; // 20 seconds
 
+    private TextToSpeechManager ttsManager;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_camera);
 
         previewView = findViewById(R.id.previewView);
+
+        ttsManager = new TextToSpeechManager(this);
 
         if (allPermissionsGranted()) {
             startCamera();
@@ -106,7 +111,26 @@ public class CameraActivity extends AppCompatActivity {
                             Log.d("CameraCapture", "Base64 Image Size: " + (base64Image.length() / 1024) + " KB");
 
                             // Send to API
-                            GroqApiService.sendImageToApi(CameraActivity.this, base64Image);
+                            GroqApiClient.sendImagetoGroq(resizedBitmap, new GroqApiClient.GroqResponseListener() {
+                                @Override
+                                public void onSuccess(String description) {
+                                    runOnUiThread(() -> {
+                                        Toast.makeText(CameraActivity.this, "Description: " + description, Toast.LENGTH_LONG).show();
+                                        Log.d("GroqResponse", description);
+
+                                        // 🔊 Speak out loud
+                                        ttsManager.speak(description);
+                                    });
+                                }
+
+                                @Override
+                                public void onFailure(String error) {
+                                    runOnUiThread(() -> {
+                                        Toast.makeText(CameraActivity.this, "Groq Error: " + error, Toast.LENGTH_SHORT).show();
+                                        Log.e("GroqError", error);
+                                    });
+                                }
+                            });
 
                             runOnUiThread(() ->
                                     Toast.makeText(CameraActivity.this, "Captured & Sent", Toast.LENGTH_SHORT).show()
@@ -151,6 +175,9 @@ public class CameraActivity extends AppCompatActivity {
         handler.removeCallbacks(captureRunnable);
         if (cameraExecutor != null && !cameraExecutor.isShutdown()) {
             cameraExecutor.shutdown();
+        }
+        if (ttsManager != null) {
+            ttsManager.shutdown();
         }
         Log.d("CameraActivity", "CameraActivity destroyed and capture loop stopped.");
     }
