@@ -1,7 +1,13 @@
 package com.example.opticview.ui;
 
+import android.content.Context;
 import android.content.Intent;
+import android.content.SharedPreferences;
+import android.net.Uri;
+import android.os.Build;
 import android.os.Bundle;
+import android.os.PowerManager;
+import android.provider.Settings;
 import android.view.KeyEvent;
 import android.widget.Button;
 import android.widget.Toast;
@@ -14,7 +20,7 @@ import androidx.core.view.WindowInsetsCompat;
 
 import com.example.opticview.R;
 import com.example.opticview.camera.CameraActivity;
-import com.example.opticview.sensor.ShakeService; // ✅ Make sure this import is here
+import com.example.opticview.sensor.ShakeService;
 
 public class MainActivity extends AppCompatActivity {
 
@@ -26,9 +32,25 @@ public class MainActivity extends AppCompatActivity {
         EdgeToEdge.enable(this);
         setContentView(R.layout.activity_main);
 
-        // ✅ Start ShakeService here
+        // ✅ Start ShakeService
         Intent shakeServiceIntent = new Intent(this, ShakeService.class);
         startService(shakeServiceIntent);
+
+        // ✅ Ask user to disable battery optimization only once
+        SharedPreferences prefs = getSharedPreferences("app_prefs", MODE_PRIVATE);
+        boolean askedBatteryOpt = prefs.getBoolean("asked_battery_optimization", false);
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M && !askedBatteryOpt) {
+            PowerManager pm = (PowerManager) getSystemService(Context.POWER_SERVICE);
+            if (pm != null && !pm.isIgnoringBatteryOptimizations(getPackageName())) {
+                Intent intent = new Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS);
+                intent.setData(Uri.parse("package:" + getPackageName()));
+                startActivity(intent);
+
+                // ✅ Save preference so we don't ask again
+                prefs.edit().putBoolean("asked_battery_optimization", true).apply();
+            }
+        }
 
         ViewCompat.setOnApplyWindowInsetsListener(findViewById(R.id.main), (v, insets) -> {
             Insets systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars());
@@ -39,7 +61,7 @@ public class MainActivity extends AppCompatActivity {
         Button startButton = findViewById(R.id.btn_start_capture);
         startButton.setOnClickListener(v -> {
             Intent intent = new Intent(MainActivity.this, CameraActivity.class);
-            intent.putExtra("language_mode", currentLanguageMode); // Pass the selected mode
+            intent.putExtra("language_mode", currentLanguageMode);
             startActivity(intent);
         });
     }
@@ -63,7 +85,7 @@ public class MainActivity extends AppCompatActivity {
             }
 
             Toast.makeText(this, modeText, Toast.LENGTH_SHORT).show();
-            return true; // consume the event
+            return true;
         }
         return super.onKeyDown(keyCode, event);
     }

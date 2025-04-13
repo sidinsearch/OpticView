@@ -12,6 +12,7 @@ import android.hardware.SensorManager;
 import android.os.Build;
 import android.os.IBinder;
 
+import androidx.annotation.Nullable;
 import androidx.core.app.NotificationCompat;
 
 import com.example.opticview.R;
@@ -19,30 +20,28 @@ import com.example.opticview.ui.MainActivity;
 
 public class ShakeService extends Service implements SensorEventListener {
 
-    private static final String CHANNEL_ID = "ShakeServiceChannel";
     private SensorManager sensorManager;
     private Sensor accelerometer;
-
+    private long mShakeTimestamp;
     private static final float SHAKE_THRESHOLD_GRAVITY = 2.7F;
     private static final int SHAKE_SLOP_TIME_MS = 500;
-    private long mShakeTimestamp;
+    private static final String CHANNEL_ID = "ShakeServiceChannel";
 
     @Override
     public void onCreate() {
         super.onCreate();
-        createNotificationChannel();
-        Notification notification = new NotificationCompat.Builder(this, CHANNEL_ID)
-                .setContentTitle("Shake Detection Active")
-                .setContentText("Shake your phone to open the app")
-                .setSmallIcon(R.drawable.ic_launcher_foreground)
-                .build();
-        startForeground(1, notification);
-
         sensorManager = (SensorManager) getSystemService(SENSOR_SERVICE);
         if (sensorManager != null) {
             accelerometer = sensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER);
-            sensorManager.registerListener(this, accelerometer, SensorManager.SENSOR_DELAY_NORMAL);
+            sensorManager.registerListener(this, accelerometer, SensorManager.SENSOR_DELAY_UI);
         }
+        createNotificationChannel();
+        Notification notification = new NotificationCompat.Builder(this, CHANNEL_ID)
+                .setContentTitle("Shake Service Running")
+                .setContentText("Shake detection active")
+                .setSmallIcon(R.drawable.ic_launcher_foreground)
+                .build();
+        startForeground(1, notification);
     }
 
     @Override
@@ -66,9 +65,9 @@ public class ShakeService extends Service implements SensorEventListener {
 
         if (gForce > SHAKE_THRESHOLD_GRAVITY) {
             final long now = System.currentTimeMillis();
-
-            if (mShakeTimestamp + SHAKE_SLOP_TIME_MS > now) return;
-
+            if (mShakeTimestamp + SHAKE_SLOP_TIME_MS > now) {
+                return;
+            }
             mShakeTimestamp = now;
 
             Intent intent = new Intent(getApplicationContext(), MainActivity.class);
@@ -80,17 +79,16 @@ public class ShakeService extends Service implements SensorEventListener {
     @Override
     public void onAccuracyChanged(Sensor sensor, int accuracy) {}
 
-    @Override
-    public void onDestroy() {
-        super.onDestroy();
-        if (sensorManager != null) {
-            sensorManager.unregisterListener(this);
-        }
-    }
-
+    @Nullable
     @Override
     public IBinder onBind(Intent intent) {
         return null;
+    }
+
+    @Override
+    public void onDestroy() {
+        super.onDestroy();
+        sensorManager.unregisterListener(this);
     }
 
     private void createNotificationChannel() {
@@ -98,10 +96,12 @@ public class ShakeService extends Service implements SensorEventListener {
             NotificationChannel serviceChannel = new NotificationChannel(
                     CHANNEL_ID,
                     "Shake Service Channel",
-                    NotificationManager.IMPORTANCE_LOW
+                    NotificationManager.IMPORTANCE_DEFAULT
             );
             NotificationManager manager = getSystemService(NotificationManager.class);
-            manager.createNotificationChannel(serviceChannel);
+            if (manager != null) {
+                manager.createNotificationChannel(serviceChannel);
+            }
         }
     }
 }
