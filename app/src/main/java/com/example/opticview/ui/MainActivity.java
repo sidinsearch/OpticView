@@ -2,7 +2,9 @@ package com.example.opticview.ui;
 
 import android.content.Intent;
 import android.os.Bundle;
+import android.view.KeyEvent;
 import android.widget.Button;
+import android.widget.Toast;
 
 import androidx.activity.EdgeToEdge;
 import androidx.appcompat.app.AppCompatActivity;
@@ -14,6 +16,8 @@ import com.example.opticview.R;
 import com.example.opticview.camera.CameraActivity;
 
 public class MainActivity extends AppCompatActivity {
+
+    private int currentLanguageMode = 0; // 0 = English, 1 = Marathi, 2 = Hindi
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -30,7 +34,32 @@ public class MainActivity extends AppCompatActivity {
         Button startButton = findViewById(R.id.btn_start_capture);
         startButton.setOnClickListener(v -> {
             Intent intent = new Intent(MainActivity.this, CameraActivity.class);
+            intent.putExtra("language_mode", currentLanguageMode); // Pass the selected mode
             startActivity(intent);
         });
+    }
+
+    @Override
+    public boolean onKeyDown(int keyCode, KeyEvent event) {
+        if (keyCode == KeyEvent.KEYCODE_VOLUME_UP || keyCode == KeyEvent.KEYCODE_VOLUME_DOWN) {
+            currentLanguageMode = (currentLanguageMode + 1) % 3;
+
+            String modeText;
+            switch (currentLanguageMode) {
+                case 1:
+                    modeText = "Language Mode: Marathi";
+                    break;
+                case 2:
+                    modeText = "Language Mode: Hindi";
+                    break;
+                default:
+                    modeText = "Language Mode: English";
+                    break;
+            }
+
+            Toast.makeText(this, modeText, Toast.LENGTH_SHORT).show();
+            return true; // consume the event
+        }
+        return super.onKeyDown(keyCode, event);
     }
 }

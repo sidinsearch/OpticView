@@ -8,6 +8,7 @@ import android.os.Bundle;
 import android.os.Handler;
 import android.util.Base64;
 import android.util.Log;
+import android.view.KeyEvent;
 import android.widget.Toast;
 
 import androidx.annotation.NonNull;
@@ -27,15 +28,28 @@ import java.nio.ByteBuffer;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
+
+
 public class CameraActivity extends AppCompatActivity {
 
     private PreviewView previewView;
     private ImageCapture imageCapture;
     private ExecutorService cameraExecutor;
     private Handler handler = new Handler();
-    private static final long INTERVAL = 20000; // 20 seconds
+    private static final long INTERVAL = 20000;
 
     private TextToSpeechManager ttsManager;
+
+    private Bitmap lastCapturedBitmap = null;
+
+    private int selectedLanguageMode = 0; // From MainActivity
+
+    private long lastGroqCallTime = 0;
+    private static final long GROQ_COOLDOWN_MS = 15000;
+
+    private boolean canCallGroq() {
+        return System.currentTimeMillis() - lastGroqCallTime > GROQ_COOLDOWN_MS;
+    }
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -43,14 +57,16 @@ public class CameraActivity extends AppCompatActivity {
         setContentView(R.layout.activity_camera);
 
         previewView = findViewById(R.id.previewView);
-
         ttsManager = new TextToSpeechManager(this);
+
+        // 🔄 Get the selected language from MainActivity
+        selectedLanguageMode = getIntent().getIntExtra("language_mode", 0);
+        Toast.makeText(this, "Language Selected: " + getLangName(selectedLanguageMode), Toast.LENGTH_SHORT).show();
 
         if (allPermissionsGranted()) {
             startCamera();
         } else {
-            ActivityCompat.requestPermissions(this,
-                    new String[]{Manifest.permission.CAMERA}, 101);
+            ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.CAMERA}, 101);
         }
 
         cameraExecutor = Executors.newSingleThreadExecutor();
@@ -74,8 +90,6 @@ public class CameraActivity extends AppCompatActivity {
 
                 handler.post(captureRunnable);
 
-                Log.d("CameraActivity", "Camera started and capture loop initiated.");
-
             } catch (Exception e) {
                 Log.e("CameraActivity", "Camera initialization failed", e);
             }
@@ -87,54 +101,37 @@ public class CameraActivity extends AppCompatActivity {
         public void run() {
             if (imageCapture == null) return;
 
-            Log.d("CameraCapture", "Attempting to capture image...");
-
             imageCapture.takePicture(ContextCompat.getMainExecutor(CameraActivity.this),
                     new ImageCapture.OnImageCapturedCallback() {
                         @Override
                         public void onCaptureSuccess(@NonNull ImageProxy image) {
-                            Log.d("CameraCapture", "Image captured successfully");
-
                             Bitmap bitmap = imageProxyToBitmap(image);
                             image.close();
 
-                            // Resize
-                            Bitmap resizedBitmap = resizeBitmap(bitmap, 800); // Resize to max width = 800px
+                            Bitmap resizedBitmap = resizeBitmap(bitmap, 800);
+                            lastCapturedBitmap = resizedBitmap;
 
-                            // Compress
-                            ByteArrayOutputStream baos = new ByteArrayOutputStream();
-                            resizedBitmap.compress(Bitmap.CompressFormat.JPEG, 70, baos); // 70% quality
-                            byte[] imageBytes = baos.toByteArray();
+                            if (canCallGroq()) {
+                                lastGroqCallTime = System.currentTimeMillis();
+                                GroqApiClient.sendImagetoGroq(resizedBitmap, selectedLanguageMode, new GroqApiClient.GroqResponseListener() {
+                                    @Override
+                                    public void onSuccess(String description) {
+                                        runOnUiThread(() -> {
+                                            Toast.makeText(CameraActivity.this, "Description: " + description, Toast.LENGTH_LONG).show();
+                                            ttsManager.speak(description);
+                                        });
+                                    }
 
-                            // Convert to Base64
-                            String base64Image = Base64.encodeToString(imageBytes, Base64.NO_WRAP);
-                            Log.d("CameraCapture", "Base64 Image Size: " + (base64Image.length() / 1024) + " KB");
-
-                            // Send to API
-                            GroqApiClient.sendImagetoGroq(resizedBitmap, new GroqApiClient.GroqResponseListener() {
-                                @Override
-                                public void onSuccess(String description) {
-                                    runOnUiThread(() -> {
-                                        Toast.makeText(CameraActivity.this, "Description: " + description, Toast.LENGTH_LONG).show();
-                                        Log.d("GroqResponse", description);
-
-                                        // 🔊 Speak out loud
-                                        ttsManager.speak(description);
-                                    });
-                                }
-
-                                @Override
-                                public void onFailure(String error) {
-                                    runOnUiThread(() -> {
-                                        Toast.makeText(CameraActivity.this, "Groq Error: " + error, Toast.LENGTH_SHORT).show();
-                                        Log.e("GroqError", error);
-                                    });
-                                }
-                            });
-
-                            runOnUiThread(() ->
-                                    Toast.makeText(CameraActivity.this, "Captured & Sent", Toast.LENGTH_SHORT).show()
-                            );
+                                    @Override
+                                    public void onFailure(String error) {
+                                        runOnUiThread(() ->
+                                                Toast.makeText(CameraActivity.this, "Groq Error: " + error, Toast.LENGTH_SHORT).show()
+                                        );
+                                    }
+                                });
+                            } else {
+                                Toast.makeText(CameraActivity.this, "Rate limit: Try again later.", Toast.LENGTH_SHORT).show();
+                            }
 
                             handler.postDelayed(captureRunnable, INTERVAL);
                         }
@@ -142,13 +139,12 @@ public class CameraActivity extends AppCompatActivity {
                         @Override
                         public void onError(@NonNull ImageCaptureException exception) {
                             Log.e("CameraCapture", "Capture failed", exception);
-                            handler.postDelayed(captureRunnable, INTERVAL); // Retry anyway
+                            handler.postDelayed(captureRunnable, INTERVAL);
                         }
                     });
         }
     };
 
-    // Convert ImageProxy to Bitmap
     private Bitmap imageProxyToBitmap(ImageProxy image) {
         ImageProxy.PlaneProxy plane = image.getPlanes()[0];
         ByteBuffer buffer = plane.getBuffer();
@@ -157,7 +153,6 @@ public class CameraActivity extends AppCompatActivity {
         return BitmapFactory.decodeByteArray(bytes, 0, bytes.length);
     }
 
-    // Resize bitmap to a max width while maintaining aspect ratio
     private Bitmap resizeBitmap(Bitmap original, int maxWidth) {
         float aspectRatio = original.getWidth() / (float) original.getHeight();
         int height = Math.round(maxWidth / aspectRatio);
@@ -170,6 +165,46 @@ public class CameraActivity extends AppCompatActivity {
     }
 
     @Override
+    public boolean onKeyDown(int keyCode, KeyEvent event) {
+        if ((keyCode == KeyEvent.KEYCODE_VOLUME_UP || keyCode == KeyEvent.KEYCODE_VOLUME_DOWN)
+                && lastCapturedBitmap != null) {
+
+            if (canCallGroq()) {
+                lastGroqCallTime = System.currentTimeMillis();
+                GroqApiClient.sendImagetoGroq(lastCapturedBitmap, selectedLanguageMode, new GroqApiClient.GroqResponseListener() {
+                    @Override
+                    public void onSuccess(String description) {
+                        runOnUiThread(() -> {
+                            Toast.makeText(CameraActivity.this, "🔁 Replaying with " + getLangName(selectedLanguageMode), Toast.LENGTH_SHORT).show();
+                            ttsManager.speak(description);
+                        });
+                    }
+
+                    @Override
+                    public void onFailure(String error) {
+                        runOnUiThread(() ->
+                                Toast.makeText(CameraActivity.this, "Groq Error: " + error, Toast.LENGTH_SHORT).show()
+                        );
+                    }
+                });
+            } else {
+                Toast.makeText(this, "Please wait before trying again.", Toast.LENGTH_SHORT).show();
+            }
+
+            return true;
+        }
+        return super.onKeyDown(keyCode, event);
+    }
+
+    private String getLangName(int langCode) {
+        switch (langCode) {
+            case 1: return "Marathi";
+            case 2: return "Hindi";
+            default: return "English";
+        }
+    }
+
+    @Override
     protected void onDestroy() {
         super.onDestroy();
         handler.removeCallbacks(captureRunnable);
@@ -179,6 +214,5 @@ public class CameraActivity extends AppCompatActivity {
         if (ttsManager != null) {
             ttsManager.shutdown();
         }
-        Log.d("CameraActivity", "CameraActivity destroyed and capture loop stopped.");
     }
 }

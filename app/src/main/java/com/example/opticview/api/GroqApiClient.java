@@ -25,20 +25,20 @@ public class GroqApiClient {
         void onFailure(String error);
     }
 
-    // Accepts Bitmap instead of URL
-    public static void sendImagetoGroq(Bitmap bitmap, GroqResponseListener listener) {
+    // Updated: Now supports multi-language prompt selection via volumePressCount
+    public static void sendImagetoGroq(Bitmap bitmap, int volumePressCount, GroqResponseListener listener) {
         String apiKey = "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";
 
         // Convert Bitmap to Base64
         ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
-        bitmap.compress(Bitmap.CompressFormat.JPEG, 70, outputStream);  // 70% quality
+        bitmap.compress(Bitmap.CompressFormat.JPEG, 70, outputStream);
         byte[] imageBytes = outputStream.toByteArray();
         String base64Image = Base64.encodeToString(imageBytes, Base64.NO_WRAP);
 
         OkHttpClient client = new OkHttpClient();
 
         try {
-            // Image part
+            // Construct image input for the Groq API
             JSONObject imageObj = new JSONObject();
             imageObj.put("type", "image_url");
 
@@ -46,13 +46,26 @@ public class GroqApiClient {
             imageUrlObj.put("url", "data:image/jpeg;base64," + base64Image);
             imageObj.put("image_url", imageUrlObj);
 
-            // Text prompt
+            // Select prompt based on volumePressCount
+            String prompt;
+            switch (volumePressCount) {
+                case 1: // Marathi
+                    prompt = "तुम्ही एका दृष्टिहीन व्यक्तीला त्यांच्या सभोवतालच्या परिसराचे वर्णन करण्यात मदत करणारे स्मार्ट सहाय्यक आहात. कृपया सभोवतालचे लोक, वस्तू, चिन्हे आणि हालचाल स्पष्टपणे आणि सोप्या भाषेत सांगितले पाहिजे. वाहन, पायऱ्या, टोक, आग किंवा जवळ येणारी व्यक्ती यांसारख्या संभाव्य धोक्यांची सूचना द्या. भाषा लहान, स्पष्ट आणि ऑडिओसाठी योग्य असावी. 'प्रतिमा' हा शब्द वापरू नका.";
+                    break;
+                case 2: // Hindi
+                    prompt = "आप एक स्मार्ट सहायक हैं जो एक दृष्टिहीन व्यक्ति को उनके आस-पास की दुनिया को समझने में मदद कर रहे हैं। कृपया आस-पास के लोगों, वस्तुओं, संकेतों और गतिविधियों का स्पष्ट और सरल वर्णन करें। किसी भी संभावित खतरे जैसे वाहन, सीढ़ियाँ, किनारे, आग, या पास आते लोगों की चेतावनी दें। भाषा को छोटा, स्पष्ट और ऑडियो के लिए उपयुक्त रखें। 'चित्र' शब्द का उपयोग न करें।";
+                    break;
+                default: // English
+                    prompt = "You are a smart assistant helping a visually impaired person understand their surroundings. " +
+                            "Describe everything clearly and simply. Mention nearby people, objects, signs, and movement. " +
+                            "Alert about any potential danger like vehicles, stairs, edges, fire, or approaching individuals. " +
+                            "Use short, clear, and easy-to-understand language suitable for spoken audio. Avoid mentioning the word 'image'.";
+            }
+
+            // Construct text message with selected prompt
             JSONObject textObj = new JSONObject();
             textObj.put("type", "text");
-            textObj.put("text", "You are a smart assistant helping a visually impaired person understand their surroundings. " +
-                    "Describe everything clearly and simply. Mention nearby people, objects, signs, and movement. " +
-                    "Alert about any potential danger like vehicles, stairs, edges, fire, or approaching individuals. " +
-                    "Use short, clear, and easy-to-understand language suitable for spoken audio. Avoid mentioning the word 'image'.");
+            textObj.put("text", prompt);
 
             JSONArray content = new JSONArray();
             content.put(textObj);
@@ -65,6 +78,7 @@ public class GroqApiClient {
             JSONArray messages = new JSONArray();
             messages.put(message);
 
+            // Set body for Groq LLaMA model API request
             JSONObject body = new JSONObject();
             body.put("model", "meta-llama/llama-4-maverick-17b-128e-instruct");
             body.put("messages", messages);
