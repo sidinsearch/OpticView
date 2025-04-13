@@ -2,7 +2,7 @@ import base64
 from groq import Groq
 import os
 
-API_KEY = "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"
+API_KEY = "YOUR KEY FROM GROQ"
 MODEL_NAME = "meta-llama/llama-4-scout-17b-16e-instruct"
 client = Groq(api_key=API_KEY)
 
