@@ -14,6 +14,7 @@ import androidx.core.view.WindowInsetsCompat;
 
 import com.example.opticview.R;
 import com.example.opticview.camera.CameraActivity;
+import com.example.opticview.sensor.ShakeService; // ✅ Make sure this import is here
 
 public class MainActivity extends AppCompatActivity {
 
@@ -24,6 +25,10 @@ public class MainActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         EdgeToEdge.enable(this);
         setContentView(R.layout.activity_main);
+
+        // ✅ Start ShakeService here
+        Intent shakeServiceIntent = new Intent(this, ShakeService.class);
+        startService(shakeServiceIntent);
 
         ViewCompat.setOnApplyWindowInsetsListener(findViewById(R.id.main), (v, insets) -> {
             Insets systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars());
