@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Vision Assistant</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100 flex flex-col items-center justify-center min-h-screen py-4">
+
+  <h1 class="text-3xl font-bold mb-4 text-center">👁️ Vision Assistant</h1>
+  
+  <!-- Video Stream -->
+  <video id="video" autoplay class="border rounded-lg shadow-md w-full max-w-lg"></video>
+
+  <!-- Button is no longer needed as the capture is automatic -->
+  <button id="captureBtn" class="mt-4 bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50 hidden">
+    Capture & Analyze
+  </button>
+
+  <script>
+    const video = document.getElementById("video");
+
+    // Initialize the webcam, using the rear camera if available
+    navigator.mediaDevices.getUserMedia({ 
+      video: { facingMode: 'environment' }
+    })
+    .then(stream => { 
+      video.srcObject = stream; 
+    })
+    .catch(err => console.error("Error accessing webcam: ", err));
+
+    // Function to speak the description using Web Speech API
+    function speakText(text) {
+      const synth = window.speechSynthesis;
+      const utterance = new SpeechSynthesisUtterance(text);
+      utterance.lang = "en-US"; // You can change the language or accent
+      synth.speak(utterance);
+    }
+
+    // Automatically capture image every 30 seconds
+    setInterval(async () => {
+      const canvas = document.createElement("canvas");
+      canvas.width = video.videoWidth;
+      canvas.height = video.videoHeight;
+      canvas.getContext("2d").drawImage(video, 0, 0);
+      const imageData = canvas.toDataURL("image/jpeg");
+
+      // Send image data to the backend for analysis
+      const res = await fetch("/analyze", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ image: imageData })
+      });
+
+      // Get the description from the backend
+      const data = await res.json();
+
+      // Speak the description aloud
+      speakText(data.description);
+    }, 30000); // Capture image every 30 seconds
+  </script>
+
+</body>
+</html>
