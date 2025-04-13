@@ -1,4 +1,0 @@
-Flask
-groq
-opencv-python-headless
-gunicorn
